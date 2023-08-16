@@ -117,7 +117,7 @@ def home_dashboad():
     return render_template('index.html', results=results_df)
 
 
-@app.route('/search_rumahsakit', methods=['GET', 'POST'])
+@app.route('/search_rumahsakit')
 def search_rumahsakit():
     query = request.form.get('query')
     if query:
