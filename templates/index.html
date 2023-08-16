@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rumah Sakit Search Engine</title>
+    <link 
+        rel="stylesheet" 
+        href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" 
+        integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" 
+        crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js" 
+        integrity="sha384-NXgwF8Kv9SSAr+jemKKcbvQsz+teULH/a5UNJvZc6kP47hZgl62M1vGnw6gHQhb1" 
+        crossorigin="anonymous">
+    </script>
+    <script 
+        src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" 
+        integrity="sha384-eMNCOe7tC1doHpGoWe/6oMVemdAVTMs2xqW4mwXrXsW0L84Iytr2wi5v2QjrP/xp" 
+        crossorigin="anonymous">
+    </script>
+    <script 
+        src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" 
+        integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" 
+        crossorigin="anonymous">
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="my-4">Rumah Sakit Search Engine</h1>
+        <form id="search-form" class="form-inline">
+            <input
+                type="text"
+                name="query"
+                placeholder="Search..."
+                class="form-control mr-2"
+            />  
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    <br/>
+    <p id="processing-times"></p>
+    <br/>
+    <table class="table table-striped">
+        <thead id="results-header">
+            <tr>
+                <th>Nama Rumah Sakit</th>
+                <th>Kode Rumah Sakit</th>
+                <th>Alamat</th>
+                <th>No Telp</th>
+                <th>URL</th>
+            </tr>
+            
+        </thead>
+        <tbody id="results-table">
+            {% for row in results[:] %}
+                <tr>
+                    <td>{{ row['Nama Rumah Sakit'] | safe }}</td>
+                    <td>{{ row['Kode Rumah Sakit'] | safe }}</td>
+                    <td>{{ row['Alamat'] | safe }}</td>
+                    <td>{{ row['Telp'] | safe }}</td>
+                    <td><a href="{{ row['URL'] | safe }}"> {{ row['URL'] | safe }} </a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <script>
+        $(document).ready(function () {
+            $("#search-form").on("submit", function (event) {
+                event.preventDefault();
+                const query = $(this).find("input[name='query']").val();
+                $.ajax({
+                    url: "/search_rumahsakit",
+                    method: "POST",
+                    data: {
+                        query: query,
+                    },
+                    success: function (data) {
+                        let tableContent = "";
+                        const algorithms = ['fuzzy', 'ngram', 'jarowinkler'];
+                        const maxRows = Math.max(...Object.values(data.results).map(results => results.length));
+                        
+                        tableHeader = "<tr>"
+                        for (const algorithm of algorithms) {
+                            tableHeader += `<th>${algorithm}</th>`;
+                            tableHeader += `<th>Score</th>`;
+                        }
+                        tableHeader += "</tr>";
+
+                        for (let i = 0; i < maxRows; i++) {
+                            tableContent += "<tr>";
+                            for (const algorithm of algorithms) {
+                                const result = data.results[algorithm][i];
+                                const score = data.score[algorithm];
+                                if (result) {
+                                    tableContent += `<td>${result["Nama Rumah Sakit"]}</td>`;
+                                    tableContent += `<td>${score[i][1]}</td>`;
+                                } else {
+                                    tableContent += "<td></td>";
+                                    tableContent += "<td></td>";
+                                }
+                            }
+                            tableContent += "</tr>";
+                        }
+
+                        $("#results-header").html(tableHeader)
+                        $("#results-table").html(tableContent);
+                        $("#processing-times").html(`Fuzzy: ${data.processing_times.fuzzy.toFixed(2)}s, N-gram: ${data.processing_times.ngram.toFixed(2)}s, Jarro-Winkler: ${data.processing_times.jarowinkler.toFixed(2)}s`);
+                    }
+                });
+            });
+        });
+    </script> 
+</body>
+</html>
